@@ -73,9 +73,8 @@ def read_vcf(input_path: str) -> pd.DataFrame:
     return pd.DataFrame(df_lst)
 
 
-def process_vcf_baf(table):
-    """
-    Processes variant data from a VCF (Variant Call Format) DataFrame to calculate B-Allele Frequency (BAF).
+def process_vcf_baf(df_vcf: pd.DataFrame) -> pd.DataFrame:
+    """Processes variant data from a VCF (Variant Call Format) DataFrame to calculate B-Allele Frequency (BAF).
 
     Args:
         df_vcf (pd.DataFrame): A DataFrame containing VCF variant data with the following columns:
@@ -87,18 +86,12 @@ def process_vcf_baf(table):
             - 'BAF': B-Allele Frequency calculated as the maximum allelic depth divided by the total allelic depth.
     """
 
-    table = table.assign(AD=lambda x: x["AD"].str.split(","))  # split list
-    table["POS"] = pd.to_numeric(table["POS"])
-    table["AD"] = table.AD.apply(
-        lambda x: [int(y) for y in x]
+    df_vcf = df_vcf.assign(AD=lambda x: x["AD"].str.split(","))  # split list
+    df_vcf["POS"] = pd.to_numeric(df_vcf["POS"])
+    df_vcf["AD"] = df_vcf.AD.apply(
+        lambda x: [y for y in x if (y := int(y)) > 1]
     )  # turn str to int in list
-    table["AD"] = table.AD.apply(
-        lambda x: [y for y in x if y != 0 and y != 1]
-    )  # filter zeros (and ones) from list
-    table = table[
-        (table["AD"].map(lambda x: len(x)) > 0)
-        & (table["AD"].map(lambda x: len(x)) < 3)
-    ]
-    table["BAF"] = table.AD.apply(lambda x: x[0] / sum(x))
+    df_vcf = df_vcf[df_vcf["AD"].map(lambda x: len(x)) < 3]
+    df_vcf["BAF"] = df_vcf.AD.apply(lambda x: max(x) / sum(x))
 
-    return table
+    return df_vcf.reset_index(drop=true)
