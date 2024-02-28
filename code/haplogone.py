@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
-import cbs
 
 
 def process_line(line: str, colnames: list) -> dict:
@@ -72,3 +71,34 @@ def read_vcf(input_path: str) -> pd.DataFrame:
                 df_lst.append(processed_line_dct)
 
     return pd.DataFrame(df_lst)
+
+
+def process_vcf_baf(table):
+    """
+    Processes variant data from a VCF (Variant Call Format) DataFrame to calculate B-Allele Frequency (BAF).
+
+    Args:
+        df_vcf (pd.DataFrame): A DataFrame containing VCF variant data with the following columns:
+            - 'AD': Allelic depths (comma-separated string of integers).
+            - 'POS': Variant position (numeric).
+
+    Returns:
+        pd.DataFrame: Processed DataFrame with the following additional column:
+            - 'BAF': B-Allele Frequency calculated as the maximum allelic depth divided by the total allelic depth.
+    """
+
+    table = table.assign(AD=lambda x: x["AD"].str.split(","))  # split list
+    table["POS"] = pd.to_numeric(table["POS"])
+    table["AD"] = table.AD.apply(
+        lambda x: [int(y) for y in x]
+    )  # turn str to int in list
+    table["AD"] = table.AD.apply(
+        lambda x: [y for y in x if y != 0 and y != 1]
+    )  # filter zeros (and ones) from list
+    table = table[
+        (table["AD"].map(lambda x: len(x)) > 0)
+        & (table["AD"].map(lambda x: len(x)) < 3)
+    ]
+    table["BAF"] = table.AD.apply(lambda x: x[0] / sum(x))
+
+    return table
