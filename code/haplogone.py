@@ -89,9 +89,10 @@ def process_vcf_baf(df_vcf: pd.DataFrame) -> pd.DataFrame:
     df_vcf = df_vcf.assign(AD=lambda x: x["AD"].str.split(","))  # split list
     df_vcf["POS"] = pd.to_numeric(df_vcf["POS"])
     df_vcf["AD"] = df_vcf.AD.apply(
-        lambda x: [y for y in x if (y := int(y)) > 1]
+        lambda x: [num for y in x if (num := int(y)) > 1]
     )  # turn str to int in list
-    df_vcf = df_vcf[df_vcf["AD"].map(lambda x: len(x)) < 3]
+
+    df_vcf = df_vcf[df_vcf["AD"].map(lambda x: 0 < len(x) < 3)]
     df_vcf["BAF"] = df_vcf.AD.apply(lambda x: max(x) / sum(x))
 
-    return df_vcf.reset_index(drop=true)
+    return df_vcf.reset_index(drop=True)
