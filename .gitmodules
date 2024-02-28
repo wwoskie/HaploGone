@@ -1,0 +1,3 @@
+[submodule "code/cbs"]
+	path = code/cbs
+	url = git@github.com:wwoskie/cbs.git
