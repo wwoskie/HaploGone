@@ -47,7 +47,7 @@ def process_line(line: str, colnames: list) -> dict:
     return output_dct
 
 
-def filter_vcf(input_path: str) -> pd.DataFrame:
+def read_vcf(input_path: str) -> pd.DataFrame:
     """
     Reads a VCF file and filters relevant data into a pandas DataFrame.
 
