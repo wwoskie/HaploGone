@@ -113,7 +113,7 @@ def segment_baf(df_vcf: pd.DataFrame, p: float = 0.01) -> pd.DataFrame:
     """
 
     segments = segment(df_vcf["BAF"].to_numpy())
-    segments = validate(df_vcf["BAF"].to_numpy(), segments, p=p)
+    segments = validate(df_vcf["BAF"].to_numpy(), segments, p=p)  # instability
 
     baf_segments = []
     baf = df_vcf["BAF"]
@@ -126,3 +126,21 @@ def segment_baf(df_vcf: pd.DataFrame, p: float = 0.01) -> pd.DataFrame:
     df_vcf = df_vcf.assign(BAF_segment=baf_segments)
 
     return df_vcf
+
+
+def filter_segments_by_size(df_vcf: pd.DataFrame, threshold: int) -> pd.DataFrame:
+
+    df_agg = (
+        df_vcf.groupby("BAF_segment")
+        .agg({"POS": ["min", "max"]})["POS"]
+        .reset_index()
+        .sort_values(["min"])
+    )
+
+    segments = np.array(df_agg["BAF_segment"])
+    segment_lengths = np.array(df_agg["max"] - df_agg["min"])
+
+    if any(segment_lengths < threshold):
+        pass
+
+    return df_agg
