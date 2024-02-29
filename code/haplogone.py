@@ -100,6 +100,27 @@ def process_vcf_baf(df_vcf: pd.DataFrame) -> pd.DataFrame:
     return df_vcf.reset_index(drop=True)
 
 
+def generate_baf_segments(segments: np.array, baf: np.array) -> np.array:
+    """
+    Calculates the local mean of BAF (B-allele frequency) values within specified segments.
+
+    Args:
+        segments (np.array): An array of segment indices representing the boundaries.
+        baf (np.array): An array of BAF values.
+
+    Returns:
+        np.array: An array containing the local mean BAF values for each segment.
+    """
+
+    baf_segments = []
+
+    for indx in range(len(segments) - 1):
+        local_mean = baf[segments[indx] : segments[indx + 1]].mean()
+        baf_segments.extend([local_mean] * (segments[indx + 1] - segments[indx]))
+
+    return np.array(baf_segments)
+
+
 def segment_baf(df_vcf: pd.DataFrame, p: float = 0.01) -> pd.DataFrame:
     """
     Segments BAF values in the input DataFrame.
@@ -115,13 +136,10 @@ def segment_baf(df_vcf: pd.DataFrame, p: float = 0.01) -> pd.DataFrame:
     segments = segment(df_vcf["BAF"].to_numpy())
     segments = validate(df_vcf["BAF"].to_numpy(), segments, p=p)  # instability
 
-    baf_segments = []
-    baf = df_vcf["BAF"]
+    baf = df_vcf["BAF"].to_numpy()
 
     if len(segments) > 1:
-        for indx in range(len(segments) - 1):
-            local_mean = baf[segments[indx] : segments[indx + 1]].mean()
-            baf_segments.extend([local_mean] * (segments[indx + 1] - segments[indx]))
+        baf_segments = generate_baf_segments(segments, baf)
 
     df_vcf = df_vcf.assign(BAF_segment=baf_segments)
 
