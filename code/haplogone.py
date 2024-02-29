@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+from cbs.cbs import *
 
 
 def process_line(line: str, colnames: list) -> dict:
@@ -74,7 +75,8 @@ def read_vcf(input_path: str) -> pd.DataFrame:
 
 
 def process_vcf_baf(df_vcf: pd.DataFrame) -> pd.DataFrame:
-    """Processes variant data from a VCF (Variant Call Format) DataFrame to calculate B-Allele Frequency (BAF).
+    """
+    Processes variant data from a VCF (Variant Call Format) DataFrame to calculate B-Allele Frequency (BAF).
 
     Args:
         df_vcf (pd.DataFrame): A DataFrame containing VCF variant data with the following columns:
@@ -96,3 +98,31 @@ def process_vcf_baf(df_vcf: pd.DataFrame) -> pd.DataFrame:
     df_vcf["BAF"] = df_vcf.AD.apply(lambda x: max(x) / sum(x))
 
     return df_vcf.reset_index(drop=True)
+
+
+def segment_baf(df_vcf: pd.DataFrame, p: float = 0.01) -> pd.DataFrame:
+    """
+    Segments BAF values in the input DataFrame.
+
+    Args:
+        df_vcf (pd.DataFrame): Input DataFrame with a "BAF" column.
+        p (float, optional): Threshold for validation. Defaults to 0.01.
+
+    Returns:
+        pd.DataFrame: DataFrame with an additional "BAF_segment" column.
+    """
+
+    segments = segment(df_vcf["BAF"].to_numpy())
+    segments = validate(df_vcf["BAF"].to_numpy(), segments, p=p)
+
+    baf_segments = []
+    baf = df_vcf["BAF"]
+
+    if len(segments) > 1:
+        for indx in range(len(segments) - 1):
+            local_mean = baf[segments[indx] : segments[indx + 1]].mean()
+            baf_segments.extend([local_mean] * (segments[indx + 1] - segments[indx]))
+
+    df_vcf = df_vcf.assign(BAF_segment=baf_segments)
+
+    return df_vcf
