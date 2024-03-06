@@ -2,6 +2,31 @@ import os
 import pandas as pd
 import numpy as np
 from cbs.cbs import *
+from matplotlib.patches import Rectangle
+
+
+def read_bed(path: str) -> pd.DataFrame:
+    """
+    Read a BED file and return a pandas DataFrame.
+
+    Args:
+        path (str): Path to the BED file.
+
+    Returns:
+        pd.DataFrame
+    """
+
+    df = pd.read_csv(
+        path,
+        sep="\t",
+        names=("chr", "start", "stop", "name", "gieStain"),
+        skiprows=2,
+    )
+
+    return df
+
+
+CENTROMERES = read_bed("../../bioinf_semester_project/centromeres.bed")
 
 
 def process_line(line: str, colnames: list) -> dict:
@@ -209,7 +234,9 @@ def read_and_segment(
     return vcf_df
 
 
-def plot_chromosome(df_vcf: pd.DataFrame, name: str) -> None:
+def plot_chromosome(
+    df_vcf: pd.DataFrame, name: str, chrom_centr: str = None, centromeres=CENTROMERES
+) -> None:
     """
     Plots B-Allele Frequency (BAF) data for a given chromosome.
 
@@ -248,8 +275,47 @@ def plot_chromosome(df_vcf: pd.DataFrame, name: str) -> None:
         label=f"{name} mean",
         linestyle="--",
     )
+    hist = ax2.hist(
+        df_vcf["POS"], bins=180, label=f'"coverage" by POS count"', alpha=0.5
+    )
+    y, x, _ = hist
 
-    ax2.hist(df_vcf["POS"], bins=180, label=f'"coverage" by POS count"', alpha=0.5)
+    if chrom_centr:
+        start_pos = min(CENTROMERES[CENTROMERES["chr"] == chrom_centr]["start"])
+        stop_pos = max(CENTROMERES[CENTROMERES["chr"] == chrom_centr]["stop"])
+        ax1.add_patch(
+            Rectangle(
+                (start_pos, 0.5),
+                stop_pos - start_pos,
+                0.5,
+                facecolor="grey",
+                fill=True,
+                alpha=0.3,
+            )
+        )
+
+        ax2.add_patch(
+            Rectangle(
+                (start_pos, 0),
+                stop_pos - start_pos,
+                max(y),
+                facecolor="grey",
+                fill=True,
+                alpha=0.3,
+            )
+        )
+
+        ax3.add_patch(
+            Rectangle(
+                (start_pos, 0),
+                stop_pos - start_pos,
+                max(df_vcf["DP"]),
+                facecolor="grey",
+                fill=True,
+                alpha=0.3,
+            )
+        )
+
     ax3.scatter(df_vcf["POS"], df_vcf["DP"], label=f"coverage by DP", alpha=0.5)
 
     ax1.set_xticks(np.arange(0, max(df_vcf["POS"]), step=1e7))
@@ -260,24 +326,3 @@ def plot_chromosome(df_vcf: pd.DataFrame, name: str) -> None:
     ax3.set_xticklabels((np.arange(0, max(df_vcf["POS"]), step=1e7) / 1e6).astype(int))
 
     fig.legend(loc="lower left")
-
-
-def read_bed(path: str) -> pd.DataFrame:
-    """
-    Read a BED file and return a pandas DataFrame.
-
-    Args:
-        path (str): Path to the BED file.
-
-    Returns:
-        pd.DataFrame
-    """
-
-    df = pd.read_csv(
-        path,
-        sep="\t",
-        names=("chr", "start", "stop", "name", "gieStain"),
-        skiprows=2,
-    )
-
-    return df
