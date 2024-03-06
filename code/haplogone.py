@@ -207,3 +207,53 @@ def read_and_segment(
     vcf_df = segment_baf(vcf_df, shuffles, p)
 
     return vcf_df
+
+
+def plot_chromosome(df_vcf: pd.DataFrame, name: str) -> None:
+    """
+    Plots B-Allele Frequency (BAF) data for a given chromosome.
+
+    Args:
+        df_vcf (pd.DataFrame): DataFrame containing VCF data.
+        name (str): Name of the chromosome.
+
+    Returns:
+        None: Displays the BAF plot.
+    """
+
+    fig = plt.figure(figsize=(20, 15))
+    ax1 = fig.add_subplot(311)
+    ax2 = fig.add_subplot(312)
+    ax3 = fig.add_subplot(313)
+
+    ax1.scatter(
+        df_vcf["POS"],
+        df_vcf["BAF"],
+        s=0.6,
+        # c="b",
+        marker="o",
+        label=f"{name}",
+    )
+
+    ax1.plot(
+        df_vcf["POS"],
+        df_vcf["BAF_segment"],
+        # c="black",
+        label=f"{name} segment",
+    )
+
+    ax1.plot(
+        df_vcf["POS"],
+        np.full(len(df_vcf["POS"]), np.mean(df_vcf["BAF_segment"])),
+        label=f"{name} mean",
+        linestyle="--",
+    )
+
+    ax2.hist(df_vcf["POS"], bins=180, label=f'"coverage" by POS count"', alpha=0.5)
+    ax3.scatter(df_vcf["POS"], df_vcf["DP"], label=f"coverage by DP", alpha=0.5)
+
+    ax1.set_xticks(np.arange(0, max(df_vcf["POS"]), step=1e7))
+    ax2.set_xticks(np.arange(0, max(df_vcf["POS"]), step=1e7))
+    ax3.set_xticks(np.arange(0, max(df_vcf["POS"]), step=1e7))
+
+    fig.legend(loc="lower left")
