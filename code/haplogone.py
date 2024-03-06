@@ -221,7 +221,7 @@ def plot_chromosome(df_vcf: pd.DataFrame, name: str) -> None:
         None: Displays the BAF plot.
     """
 
-    fig = plt.figure(figsize=(20, 15))
+    fig = plt.figure(figsize=(15, 10))
     ax1 = fig.add_subplot(311)
     ax2 = fig.add_subplot(312)
     ax3 = fig.add_subplot(313)
@@ -253,7 +253,31 @@ def plot_chromosome(df_vcf: pd.DataFrame, name: str) -> None:
     ax3.scatter(df_vcf["POS"], df_vcf["DP"], label=f"coverage by DP", alpha=0.5)
 
     ax1.set_xticks(np.arange(0, max(df_vcf["POS"]), step=1e7))
+    ax1.set_xticklabels((np.arange(0, max(df_vcf["POS"]), step=1e7) / 1e6).astype(int))
     ax2.set_xticks(np.arange(0, max(df_vcf["POS"]), step=1e7))
+    ax2.set_xticklabels((np.arange(0, max(df_vcf["POS"]), step=1e7) / 1e6).astype(int))
     ax3.set_xticks(np.arange(0, max(df_vcf["POS"]), step=1e7))
+    ax3.set_xticklabels((np.arange(0, max(df_vcf["POS"]), step=1e7) / 1e6).astype(int))
 
     fig.legend(loc="lower left")
+
+
+def read_bed(path: str) -> pd.DataFrame:
+    """
+    Read a BED file and return a pandas DataFrame.
+
+    Args:
+        path (str): Path to the BED file.
+
+    Returns:
+        pd.DataFrame
+    """
+
+    df = pd.read_csv(
+        path,
+        sep="\t",
+        names=("chr", "start", "stop", "name", "gieStain"),
+        skiprows=2,
+    )
+
+    return df
