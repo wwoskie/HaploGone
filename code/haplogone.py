@@ -249,6 +249,7 @@ def plot_chromosome(
     """
 
     fig = plt.figure(figsize=(15, 10))
+    fig.suptitle(f"{name}")
     ax1 = fig.add_subplot(311)
     ax2 = fig.add_subplot(312)
     ax3 = fig.add_subplot(313)
@@ -283,6 +284,7 @@ def plot_chromosome(
     if chrom_centr:
         start_pos = min(CENTROMERES[CENTROMERES["chr"] == chrom_centr]["start"])
         stop_pos = max(CENTROMERES[CENTROMERES["chr"] == chrom_centr]["stop"])
+
         ax1.add_patch(
             Rectangle(
                 (start_pos, 0.5),
