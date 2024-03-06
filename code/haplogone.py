@@ -1,9 +1,6 @@
 import os
 import pandas as pd
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
-import seaborn as sns
 from cbs.cbs import *
 
 
@@ -74,7 +71,7 @@ def read_vcf(input_path: str) -> pd.DataFrame:
     return pd.DataFrame(df_lst)
 
 
-def process_vcf_baf(df_vcf: pd.DataFrame) -> pd.DataFrame:
+def process_vcf_baf(df_vcf: pd.DataFrame, ad_cutoff=0) -> pd.DataFrame:
     """
     Processes variant data from a VCF (Variant Call Format) DataFrame to calculate B-Allele Frequency (BAF).
 
@@ -90,8 +87,9 @@ def process_vcf_baf(df_vcf: pd.DataFrame) -> pd.DataFrame:
 
     df_vcf = df_vcf.assign(AD=lambda x: x["AD"].str.split(","))  # split list
     df_vcf["POS"] = pd.to_numeric(df_vcf["POS"])
+    df_vcf["DP"] = pd.to_numeric(df_vcf["DP"])
     df_vcf["AD"] = df_vcf.AD.apply(
-        lambda x: [num for y in x if (num := int(y)) > 1]
+        lambda x: [num for y in x if (num := int(y)) >= ad_cutoff]
     )  # turn str to int in list
 
     df_vcf = df_vcf[df_vcf["AD"].map(lambda x: 0 < len(x) < 3)]
@@ -121,7 +119,9 @@ def generate_baf_segments(segments: np.array, baf: np.array) -> np.array:
     return np.array(baf_segments)
 
 
-def segment_baf(df_vcf: pd.DataFrame, p: float = 0.01) -> pd.DataFrame:
+def segment_baf(
+    df_vcf: pd.DataFrame, shuffles: int = 1000, p: float = 0.01
+) -> pd.DataFrame:
     """
     Segments BAF values in the input DataFrame.
 
@@ -133,8 +133,10 @@ def segment_baf(df_vcf: pd.DataFrame, p: float = 0.01) -> pd.DataFrame:
         pd.DataFrame: DataFrame with an additional "BAF_segment" column.
     """
 
-    segments = segment(df_vcf["BAF"].to_numpy())
-    segments = validate(df_vcf["BAF"].to_numpy(), segments, p=p)  # instability
+    segments = segment(df_vcf["BAF"].to_numpy(), shuffles=shuffles, p=p)
+    segments = validate(
+        df_vcf["BAF"].to_numpy(), segments, shuffles=shuffles, p=p
+    )  # instability
 
     baf = df_vcf["BAF"].to_numpy()
 
@@ -158,7 +160,50 @@ def filter_segments_by_size(df_vcf: pd.DataFrame, threshold: int) -> pd.DataFram
     segments = np.array(df_agg["BAF_segment"])
     segment_lengths = np.array(df_agg["max"] - df_agg["min"])
 
+    df_agg["segment_length"] = segment_lengths
+
+    new_maxes = []
+    new_mins = []
+    new_length = []
+
     if any(segment_lengths < threshold):
-        pass
+        for indx in range(len(df_agg["segment_length"])):
+            min_ = df_agg["min"][indx]
+            max_ = df_agg["max"][indx]
+            length = df_agg["segment_length"][indx]
+
+            if length > threshold:
+                new_mins.append()
+                new_maxes.append
 
     return df_agg
+
+
+def read_and_segment(
+    path: str,
+    ad_cutoff: int = 10,
+    shuffles: int = 1000,
+    p: float = 1e-5,
+    chrom_subset: str = None,
+) -> pd.DataFrame:
+    """
+    Reads a VCF file from the specified path, processes it, and segments the data.
+
+    Args:
+        path (str): Path to the VCF file.
+        ad_cutoff (int, optional): Minimum allele depth cutoff. Defaults to 10.
+        shuffles (int, optional): Number of shuffles for BAF segmentation. Defaults to 1000.
+        p (float, optional): Significance threshold for segmentation. Defaults to 1e-5.
+        chrom_subset (str, optional): Subset of chromosomes to consider. Defaults to None.
+
+    Returns:
+        pd.DataFrame: Processed and segmented VCF data.
+    """
+
+    vcf_df = read_vcf(path)
+    if chrom_subset:
+        vcf_df = vcf_df[vcf_df["#CHROM"] == chrom_subset]
+    vcf_df = process_vcf_baf(vcf_df, ad_cutoff)
+    vcf_df = segment_baf(vcf_df, shuffles, p)
+
+    return vcf_df
