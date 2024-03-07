@@ -180,7 +180,7 @@ def filter_segments_by_size(df_vcf: pd.DataFrame, threshold: int) -> pd.DataFram
         .agg({"POS": ["min", "max"]})["POS"]
         .reset_index()
         .sort_values(["min"])
-    )
+    ).reset_index(drop=True)
 
     segments = np.array(df_agg["BAF_segment"])
     segment_lengths = np.array(df_agg["max"] - df_agg["min"])
@@ -190,18 +190,21 @@ def filter_segments_by_size(df_vcf: pd.DataFrame, threshold: int) -> pd.DataFram
     new_maxes = []
     new_mins = []
     new_length = []
+    save_old_min = False
 
     if any(segment_lengths < threshold):
         for indx in range(len(df_agg["segment_length"])):
-            min_ = df_agg["min"][indx]
-            max_ = df_agg["max"][indx]
+
             length = df_agg["segment_length"][indx]
 
-            if length > threshold:
-                new_mins.append()
-                new_maxes.append
+            min_ = df_agg["min"][indx]
+            max_ = df_agg["max"][indx]
 
-    return df_agg
+            if length > threshold:
+                new_mins.append(min_)
+                new_maxes.append(max_)
+
+    return df_agg, new_mins, new_maxes
 
 
 def read_and_segment(
@@ -328,3 +331,35 @@ def plot_chromosome(
     ax3.set_xticklabels((np.arange(0, max(df_vcf["POS"]), step=1e7) / 1e6).astype(int))
 
     fig.legend(loc="lower left")
+
+
+def create_bed_with_thres(df_vcf: pd.DataFrame, thres: float = 0.9) -> pd.DataFrame:
+    """
+    Creates a bed pd.DataFrame from a VCF pd.DataFrame with bounds of segments filtered with a given threshold.
+
+    Args:
+        df_vcf (pd.DataFrame): Input DataFrame containing VCF data.
+        thres (float, optional): Threshold value for BAF_segment. Default is 0.9.
+
+    Returns:
+        pd.DataFrame
+    """
+
+    df_vcf = df_vcf[df_vcf["BAF_segment"] >= thres]
+    df_agg = (
+        df_vcf.groupby(["#CHROM", "BAF_segment"])
+        .agg({"POS": ["min", "max"], "#CHROM": "first"})["POS"]
+        .reset_index()
+        .sort_values(["min"])
+    ).reset_index(drop=True)
+
+    df_agg["name"] = "LOH"
+
+    df_bed = pd.concat(
+        [df_agg["#CHROM"], df_agg["min"], df_agg["max"], df_agg["name"]],
+        axis=1,
+    )
+
+    df_bed.rename({"#CHROM": "#chrom", "min": "chromStart", "max": "chromEnd"})
+
+    return df_bed
