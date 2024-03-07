@@ -249,7 +249,11 @@ def plot_chromosome(
 
     Args:
         df_vcf (pd.DataFrame): DataFrame containing VCF data.
-        name (str): Name of the chromosome.
+            This DataFrame should have columns 'POS' and 'BAF'.
+        name (str): Name of the chromosome (e.g., 'chr1', 'chrX').
+        chrom_centr (str, optional): Name of the centromere region (if available).
+        chrom_bed (pd.DataFrame, optional): DataFrame containing additional chromosome bed data.
+        centromeres (pd.DataFrame, optional): DataFrame with centromere coordinates.
 
     Returns:
         None: Displays the BAF plot.
@@ -358,9 +362,14 @@ def plot_chromosome(
                 )
             )
 
-        pass
-
-    ax3.scatter(df_vcf["POS"], df_vcf["DP"], label=f"coverage by DP", alpha=0.5)
+    ax3.scatter(
+        df_vcf["POS"],
+        df_vcf["DP"],
+        label=f"coverage by DP",
+        alpha=0.5,
+        s=0.6,
+        marker="o",
+    )
 
     ax1.set_xticks(np.arange(0, max(df_vcf["POS"]), step=1e7))
     ax1.set_xticklabels((np.arange(0, max(df_vcf["POS"]), step=1e7) / 1e6).astype(int))
