@@ -238,7 +238,11 @@ def read_and_segment(
 
 
 def plot_chromosome(
-    df_vcf: pd.DataFrame, name: str, chrom_centr: str = None, centromeres=CENTROMERES
+    df_vcf: pd.DataFrame,
+    name: str,
+    chrom_centr: str = None,
+    chrom_bed: pd.DataFrame = None,
+    centromeres=CENTROMERES,
 ) -> None:
     """
     Plots B-Allele Frequency (BAF) data for a given chromosome.
@@ -261,7 +265,6 @@ def plot_chromosome(
         df_vcf["POS"],
         df_vcf["BAF"],
         s=0.6,
-        # c="b",
         marker="o",
         label=f"{name}",
     )
@@ -269,7 +272,6 @@ def plot_chromosome(
     ax1.plot(
         df_vcf["POS"],
         df_vcf["BAF_segment"],
-        # c="black",
         label=f"{name} segment",
     )
 
@@ -321,6 +323,43 @@ def plot_chromosome(
             )
         )
 
+    if chrom_bed is not None:
+        for start_pos, stop_pos in zip(chrom_bed["chromStart"], chrom_bed["chromEnd"]):
+            ax1.add_patch(
+                Rectangle(
+                    (start_pos, 0.5),
+                    stop_pos - start_pos,
+                    0.5,
+                    facecolor="red",
+                    fill=True,
+                    alpha=0.3,
+                )
+            )
+
+            ax2.add_patch(
+                Rectangle(
+                    (start_pos, 0),
+                    stop_pos - start_pos,
+                    max(y),
+                    facecolor="red",
+                    fill=True,
+                    alpha=0.3,
+                )
+            )
+
+            ax3.add_patch(
+                Rectangle(
+                    (start_pos, 0),
+                    stop_pos - start_pos,
+                    max(df_vcf["DP"]),
+                    facecolor="red",
+                    fill=True,
+                    alpha=0.3,
+                )
+            )
+
+        pass
+
     ax3.scatter(df_vcf["POS"], df_vcf["DP"], label=f"coverage by DP", alpha=0.5)
 
     ax1.set_xticks(np.arange(0, max(df_vcf["POS"]), step=1e7))
@@ -360,6 +399,9 @@ def create_bed_with_thres(df_vcf: pd.DataFrame, thres: float = 0.9) -> pd.DataFr
         axis=1,
     )
 
-    df_bed.rename({"#CHROM": "#chrom", "min": "chromStart", "max": "chromEnd"})
+    df_bed.rename(
+        columns={"#CHROM": "#chrom", "min": "chromStart", "max": "chromEnd"},
+        inplace=True,
+    )
 
     return df_bed
