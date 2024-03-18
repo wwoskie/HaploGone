@@ -26,7 +26,7 @@ def read_bed(path: str) -> pd.DataFrame:
     return df
 
 
-CENTROMERES = read_bed("../../bioinf_semester_project/centromeres.bed")
+CENTROMERES = read_bed("./centromeres.bed")
 
 
 def process_line(line: str, colnames: list) -> dict:
@@ -145,23 +145,18 @@ def generate_baf_segments(segments: np.array, baf: np.array) -> np.array:
 
 
 def segment_baf(
-    df_vcf: pd.DataFrame, shuffles: int = 1000, p: float = 0.01
+    df_vcf: pd.DataFrame,
+    size_threshold: int,
+    shuffles: int = 1000,
+    p: float = 0.01,
 ) -> pd.DataFrame:
-    """
-    Segments BAF values in the input DataFrame.
-
-    Args:
-        df_vcf (pd.DataFrame): Input DataFrame with a "BAF" column.
-        p (float, optional): Threshold for validation. Defaults to 0.01.
-
-    Returns:
-        pd.DataFrame: DataFrame with an additional "BAF_segment" column.
-    """
+    # TODO write docstring
 
     segments = segment(df_vcf["BAF"].to_numpy(), shuffles=shuffles, p=p)
     segments = validate(
         df_vcf["BAF"].to_numpy(), segments, shuffles=shuffles, p=p
     )  # instability
+    segments = filter_segments_by_size(df_vcf, segments, size_threshold)
 
     baf = df_vcf["BAF"].to_numpy()
 
@@ -173,42 +168,30 @@ def segment_baf(
     return df_vcf
 
 
-def filter_segments_by_size(df_vcf: pd.DataFrame, threshold: int) -> pd.DataFrame:
+def filter_segments_by_size(
+    df_vcf: pd.DataFrame, segments: np.array, size_threshold: int
+) -> np.array:
+    # TODO write docstring
 
-    df_agg = (
-        df_vcf.groupby("BAF_segment")
-        .agg({"POS": ["min", "max"]})["POS"]
-        .reset_index()
-        .sort_values(["min"])
-    ).reset_index(drop=True)
+    filtered_segments = [0]
+    positions = df_vcf["POS"].to_numpy()
 
-    segments = np.array(df_agg["BAF_segment"])
-    segment_lengths = np.array(df_agg["max"] - df_agg["min"])
+    for indx in range(1, len(segments) - 1):
 
-    df_agg["segment_length"] = segment_lengths
+        if (
+            positions[segments[indx]] - positions[filtered_segments[-1]]
+            > size_threshold
+        ):
+            filtered_segments.append(segments[indx])
 
-    new_maxes = []
-    new_mins = []
-    new_length = []
-    save_old_min = False
+    filtered_segments.append(segments[-1])
 
-    if any(segment_lengths < threshold):
-        for indx in range(len(df_agg["segment_length"])):
-
-            length = df_agg["segment_length"][indx]
-
-            min_ = df_agg["min"][indx]
-            max_ = df_agg["max"][indx]
-
-            if length > threshold:
-                new_mins.append(min_)
-                new_maxes.append(max_)
-
-    return df_agg, new_mins, new_maxes
+    return filtered_segments
 
 
 def read_and_segment(
     path: str,
+    size_threshold: int,
     ad_cutoff: int = 10,
     shuffles: int = 1000,
     p: float = 1e-5,
@@ -232,7 +215,7 @@ def read_and_segment(
     if chrom_subset:
         vcf_df = vcf_df[vcf_df["#CHROM"] == chrom_subset]
     vcf_df = process_vcf_baf(vcf_df, ad_cutoff)
-    vcf_df = segment_baf(vcf_df, shuffles, p)
+    vcf_df = segment_baf(vcf_df, size_threshold, shuffles, p)
 
     return vcf_df
 
@@ -414,3 +397,28 @@ def create_bed_with_thres(df_vcf: pd.DataFrame, thres: float = 0.9) -> pd.DataFr
     )
 
     return df_bed
+
+
+def segments_to_positions(
+    df_vcf: pd.DataFrame,
+    size_threshold: int,
+    ad_cutoff: int = 10,
+    shuffles: int = 1000,
+    p: float = 1e-5,
+    chrom_subset: str = None,
+) -> pd.DataFrame:
+
+    if chrom_subset:
+        df_vcf = df_vcf[df_vcf["#CHROM"] == chrom_subset]
+
+    segments = segment(df_vcf["BAF"].to_numpy())
+    segments = validate(df_vcf["BAF"].to_numpy(), segments)  # instability
+    # segments = filter_segments_by_size(df_vcf, segments, size_threshold)
+
+    new_positions = []
+    positions = list(df_vcf["POS"].to_numpy())
+
+    for index in segments:
+        new_positions.append(positions[index - 1])
+
+    return new_positions
