@@ -7,8 +7,8 @@ To install this pipeline run:
 git clone https://github.com/wwoskie/HaploGone.git && \
 cd HaploGone && \
 git checkout wip-1-optimize-vcf-parcer && \
-git submodule init && \
-git submodule update
+cd code &&\
+git clone https://github.com/wwoskie/cbs.git
 ```
 **NOTE:** please, pay attention to submodule initialization
 
