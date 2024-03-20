@@ -4,13 +4,9 @@
 
 To install this pipeline run:
 ```bash
-git clone https://github.com/wwoskie/HaploGone.git && \
-cd HaploGone && \
-git checkout wip-1-optimize-vcf-parcer && \
-cd code &&\
-git clone https://github.com/wwoskie/cbs.git
+git clone --recurse-submodules https://github.com/wwoskie/HaploGone.git
 ```
-**NOTE:** please, pay attention to submodule initialization
+**NOTE:** please, pay attention to submodule initialization option `--recurse-submodules`
 
 ## Requirements
 
