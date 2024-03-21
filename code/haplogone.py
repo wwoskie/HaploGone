@@ -7,89 +7,34 @@ from cbs.cbs import *
 from matplotlib.patches import Rectangle
 
 
-def create_bed_with_thres(df_vcf: pd.DataFrame, thres: float = 0.9) -> pd.DataFrame:
-    """
-    Creates a bed pd.DataFrame from a VCF pd.DataFrame with bounds of segments filtered with a given threshold.
-
-    Args:
-        df_vcf (pd.DataFrame): Input DataFrame containing VCF data.
-        thres (float, optional): Threshold value for BAF_segment. Default is 0.9.
-
-    Returns:
-        pd.DataFrame
-    """
-
-    df_vcf = df_vcf[df_vcf["BAF_segment"] >= thres]
-    df_agg = (
-        df_vcf.groupby(["#CHROM", "BAF_segment"])
-        .agg({"POS": ["min", "max"], "#CHROM": "first"})["POS"]
-        .reset_index()
-        .sort_values(["min"])
-    ).reset_index(drop=True)
-
-    df_agg["name"] = "LOH"
-
-    df_bed = pd.concat(
-        [df_agg["#CHROM"], df_agg["min"], df_agg["max"], df_agg["name"]],
-        axis=1,
-    )
-
-    df_bed.rename(
-        columns={"#CHROM": "#chrom", "min": "chromStart", "max": "chromEnd"},
-        inplace=True,
-    )
-
-    return df_bed
-
-
-def segments_to_positions(
-    df_vcf: pd.DataFrame,
-    size_threshold: int,
-    ad_cutoff: int = 10,
-    shuffles: int = 1000,
-    p: float = 1e-5,
-    chrom_subset: str = None,
-) -> pd.DataFrame:
-
-    if chrom_subset:
-        df_vcf = df_vcf[df_vcf["#CHROM"] == chrom_subset]
-
-    segments = segment(df_vcf["BAF"].to_numpy())
-    segments = validate(df_vcf["BAF"].to_numpy(), segments)  # instability
-    # segments = filter_segments_by_size(df_vcf, segments, size_threshold)
-
-    new_positions = []
-    positions = list(df_vcf["POS"].to_numpy())
-
-    for index in segments:
-        new_positions.append(positions[index - 1])
-
-    return new_positions
-
-
 class VCF:
 
     def __init__(
         self,
-        input_path: str,
+        input_file: str,
         segment_size_threshold: int = 1e6,
         path_to_centromeres_bed: str = "centromeres.bed",
-        shuffles: int = 1000,
-        p: float = 0.01,
+        segmentation_shuffles: int = 1000,
+        segmentation_p: float = 0.01,
+        validation_shuffles: int = 1000,
+        validation_p: float = 0.01,
     ):
-        self.input_path = input_path
+        self.input_file = input_file
         self.vcf = None
         self.segment_size_threshold = segment_size_threshold
-        self.shuffles = (shuffles,)
-        self.p = p
-        self._centromeres = self.read_bed(path_to_centromeres_bed)
+        self.segmentation_shuffles = segmentation_shuffles
+        self.segmentation_p = segmentation_p
+        self.validation_shuffles = validation_shuffles
+        self.validation_p = validation_p
+        self.path_to_centromeres_file = path_to_centromeres_bed
+        self.centromeres = self.read_bed(path_to_centromeres_bed)
 
     def read(self) -> pd.DataFrame:
         """
         Reads a VCF file into a pandas DataFrame.
 
         Args:
-            input_path (str): Path to the input VCF file.
+            input_file (str): Path to the input VCF file.
 
         Returns:
             pd.DataFrame: A DataFrame containing data from the VCF file.
@@ -97,7 +42,7 @@ class VCF:
 
         df_lst = []
 
-        with open(self.input_path) as input_f:
+        with open(self.input_file) as input_f:
             for current_line in input_f:
 
                 if current_line.startswith("##"):
@@ -214,10 +159,10 @@ class VCF:
 
         if chrom_centr:
             start_pos = min(
-                self._centromeres[self._centromeres["chr"] == chrom_centr]["start"]
+                self.centromeres[self.centromeres["chr"] == chrom_centr]["start"]
             )
             stop_pos = max(
-                self._centromeres[self._centromeres["chr"] == chrom_centr]["stop"]
+                self.centromeres[self.centromeres["chr"] == chrom_centr]["stop"]
             )
 
             ax1.add_patch(
@@ -323,7 +268,7 @@ class VCF:
                 df_vcf,
                 name=chromosome,
                 chrom_centr=chromosome,
-                chrom_bed=create_bed_with_thres(df_vcf, 0.9),
+                chrom_bed=self.create_bed(df_vcf),
             )
 
     def read_bed(self, path_to_bed: str) -> pd.DataFrame:
@@ -337,14 +282,53 @@ class VCF:
             pd.DataFrame
         """
 
-        df = pd.read_csv(
+        df_bed = pd.read_csv(
             path_to_bed,
             sep="\t",
             names=("chr", "start", "stop", "name", "gieStain"),
             skiprows=2,
         )
 
-        return df
+        return df_bed
+
+    def create_bed(
+        self, df_vcf: pd.DataFrame = None, thres: float = 0.9
+    ) -> pd.DataFrame:
+        """
+        Creates a bed pd.DataFrame from a VCF pd.DataFrame with bounds of segments filtered with a given threshold.
+
+        Args:
+            df_vcf (pd.DataFrame): Input DataFrame containing VCF data.
+            thres (float, optional): Threshold value for BAF_segment. Default is 0.9.
+
+        Returns:
+            pd.DataFrame
+        """
+
+        if df_vcf is None:
+            df_vcf = self.vcf
+
+        df_vcf = df_vcf[df_vcf["BAF_segment"] >= thres]
+        df_agg = (
+            df_vcf.groupby(["#CHROM", "BAF_segment"])
+            .agg({"POS": ["min", "max"], "#CHROM": "first"})["POS"]
+            .reset_index()
+            .sort_values(["min"])
+        ).reset_index(drop=True)
+
+        df_agg["name"] = "LOH"
+
+        df_bed = pd.concat(
+            [df_agg["#CHROM"], df_agg["min"], df_agg["max"], df_agg["name"]],
+            axis=1,
+        )
+
+        df_bed.rename(
+            columns={"#CHROM": "#chrom", "min": "chromStart", "max": "chromEnd"},
+            inplace=True,
+        )
+
+        return df_bed
 
     def _filter_segments_by_size(
         self,
@@ -428,3 +412,14 @@ class VCF:
             )
 
         return np.array(local_means_segmented)
+
+    def __repr__(self):
+        return (
+            f"VCF(\n\tinput_file='{self.input_file}',"
+            + f"\n\tpath_to_centromeres_file='{self.path_to_centromeres_file}',"
+            + f"\n\tsegment_size_threshold={self.segment_size_threshold},"
+            + f"\n\tsegmentation_shuffles={self.segmentation_shuffles},"
+            + f"\n\tsegmentation_p={self.segmentation_p},"
+            + f"\n\tvalidation_shuffles={self.validation_shuffles},"
+            + f"\n\tvalidation_p={self.validation_p}\n)"
+        )
