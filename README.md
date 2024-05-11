@@ -26,6 +26,20 @@ Install this pipeline (see **Installation**), import it and run it with your dat
 
 ## Guideline
 
+This pipeline contains a class VCF where different functions for operating on the input VCF data are collected.
+Attributes of the class:
+
+Methods of the class:
+```read``` - converts the input VCF file into pd.DataFrame. The input is a path to the VCF file.
+```count_baf``` - calculates the B-allele frequency from the variant data of the input dataset.
+```segment_baf``` - segments the input data and can filter the segment obtaint by size.
+```plot_chromosomes``` - vizualizes the result of the data segmentation for each chromosome.
+```read_bed``` - converts bed file into pd.DataFrame.
+```create_bed``` - creates a bed pd.DataFrame from a VCF pd.DataFrame with bounds of filtered segments with a given threshold.
+
+
+
+
 
 
 ## Example of working
