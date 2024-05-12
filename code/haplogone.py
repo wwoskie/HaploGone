@@ -5,6 +5,8 @@ import pandas as pd
 import random
 import string
 import numpy as np
+import mpld3
+import jinja2
 
 from cbs.cbs import *
 from datetime import date
@@ -146,6 +148,7 @@ class VCF:
         chrom_centr: str = None,
         centromeres=None,
         save_plot = False,
+        to_html=False,
     ) -> None:
         """
         TODO write docstring
@@ -267,7 +270,7 @@ class VCF:
             df_vcf["DP"],
             label=f"coverage by DP",
             alpha=0.5,
-            s=0.6,
+            s=0.8,
             marker="o",
         )
 
@@ -289,24 +292,57 @@ class VCF:
         if save_plot:
             self._check_and_create_output_dir()
             fig.savefig(f'{self.output_dir}/{name}.png')   # save the figure to file
+            plt.close(fig)
+            return f'{name}.png'
+        
+        if to_html:
             plt.close(fig) 
+            return mpld3.fig_to_html(fig)
 
-    def plot_chromosomes(self, save_plot = False):
+    def plot_chromosomes(self, save_plot=False, to_html=False,):
         if self.bed is None:
             self.bed = self.create_bed(self.vcf)
+
+        html_list = []
+        plot_paths = []
+
         for chromosome in self.vcf["#CHROM"].unique():
             if chromosome == "chrM":
                 continue
             df_vcf = self.vcf[self.vcf["#CHROM"] == chromosome]
-            self._plot_chromosome(
-                df_vcf,
-                name=chromosome,
-                chrom_centr=chromosome,
-                chrom_bed=self.bed[self.bed["#chrom"] == chromosome],
-                save_plot=save_plot
+            
+
+            if to_html:
+                html_list.append(
+                    self._plot_chromosome(
+                    df_vcf,
+                    name=chromosome,
+                    chrom_centr=chromosome,
+                    chrom_bed=self.bed[self.bed["#chrom"] == chromosome],
+                    save_plot=save_plot,
+                    to_html=to_html,
+                    )
+                )
+
+            elif save_plot:
+                plot_paths.append(
+                    self._plot_chromosome(
+                    df_vcf,
+                    name=chromosome,
+                    chrom_centr=chromosome,
+                    chrom_bed=self.bed[self.bed["#chrom"] == chromosome],
+                    save_plot=save_plot,
+                )
             )
 
-    def plot_chromosomes_circular(self, save_plot=False):
+        if to_html:
+            return html_list
+
+        if save_plot:
+            return plot_paths
+
+
+    def plot_chromosomes_circular(self, save_plot=False, to_html=False):
         sectors = {}
 
         for chrom in self.vcf["#CHROM"].unique():
@@ -372,7 +408,26 @@ class VCF:
         if save_plot:
             self._check_and_create_output_dir()
             fig.savefig(f'{self.output_dir}/circular_plot.png', dpi=300)   # save the figure to file
-            plt.close(fig) 
+            plt.close(fig)
+
+        if to_html:
+            return mpld3.fig_to_html(fig)
+
+    def generate_report(self):
+        self.plot_chromosomes_circular()
+        chrom_names = self.vcf["#CHROM"].unique()
+        circle_plot_path = f'circular_plot.png'
+        plots = self.plot_chromosomes(save_plot=True)
+
+        templateLoader = jinja2.FileSystemLoader(searchpath="./")
+        templateEnv = jinja2.Environment(loader=templateLoader)
+        TEMPLATE_FILE = "index.html"
+        template = templateEnv.get_template(TEMPLATE_FILE)
+        output = template.render(circle_plot_path = circle_plot_path, 
+        plots = plots, chrom_names = chrom_names)
+
+        with open(f'{self.output_dir}/report.html', 'w') as f:
+            f.write(output)
 
     def read_bed(self, path_to_bed: str) -> pd.DataFrame:
         """
