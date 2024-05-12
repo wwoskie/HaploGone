@@ -2,4 +2,6 @@ python>=3.10
 numpy
 pandas
 matplotlib
-seaborn
+mpld3
+Jinja2
+pyCirclize
