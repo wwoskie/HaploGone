@@ -14,8 +14,8 @@ git clone https://github.com/wwoskie/cbs.git
 ```
 **NOTE:** please, pay attention to submodule initialization:
 
-git submodule init && \
-git submodule update
+```git submodule init && \
+git submodule update```
 
 ## Requirements
 
