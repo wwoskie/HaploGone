@@ -18,6 +18,9 @@ from pycirclize import Circos
 
 
 class VCF:
+    """
+    This is a class for working with the input VCF files. Allows to segment the input data and to vizualize the result.
+    """
 
     def __init__(
         self,
@@ -56,7 +59,7 @@ class VCF:
 
     def read(self) -> pd.DataFrame:
         """
-        Reads a VCF file into a pandas DataFrame.
+        Converts a VCF file into a pandas DataFrame.
 
         Args:
             input_file (str): Path to the input VCF file.
@@ -114,10 +117,16 @@ class VCF:
 
         return self
 
-    def segment_baf(
-        self,
-    ) -> pd.DataFrame:
-        # TODO write docstring
+    def segment_baf(self) -> pd.DataFrame:
+        """
+        Segments BAF values in the input DataFrame.
+
+        Args:
+            df_vcf (pd.DataFrame): Input DataFrame with a "BAF" column.
+
+        Returns:
+            pd.DataFrame: The DataFrame with an additional "BAF_segment" column.
+        """
         df_lst = []
 
         for chromosome in self.vcf["#CHROM"].unique():
@@ -151,7 +160,13 @@ class VCF:
         to_html=False,
     ) -> None:
         """
-        TODO write docstring
+        Vizuales the result of the segmentation.
+
+        Args: 
+            df_vcf (pd.DataFrame): Input DataFrame with a "BAF_segment" column.
+        
+        Return:
+            The plot of the chromosome data with segmentation.
         """
 
         fig = plt.figure(figsize=(15, 10))
@@ -289,6 +304,7 @@ class VCF:
 
         fig.legend(loc="lower left")
 
+
         if save_plot:
             self._check_and_create_output_dir()
             fig.savefig(f'{self.output_dir}/{name}.png')   # save the figure to file
@@ -300,11 +316,22 @@ class VCF:
             return mpld3.fig_to_html(fig)
 
     def plot_chromosomes(self, save_plot=False, to_html=False,):
+        """
+        Vizualizes the whole result of the segmentation for each chromosome in the dataset.
+        
+        Args: 
+            df_vcf (pd.DataFrame): Input DataFrame with a "BAF_segment" column.
+        
+        Return:
+            The plots of the chromosome data with segmentation.
+
+        """
         if self.bed is None:
             self.bed = self.create_bed(self.vcf)
 
         html_list = []
         plot_paths = []
+
 
         for chromosome in self.vcf["#CHROM"].unique():
             if chromosome == "chrM":
@@ -505,11 +532,15 @@ class VCF:
         return self
 
 
-    def _filter_segments_by_size(
-        self,
-        segments: np.array,
-    ) -> np.array:
-        # TODO write docstring
+    def _filter_segments_by_size(self, segments: np.array) -> np.array:
+        """
+        Filters the segments by size. The segments smaller than the threshold would be removed.
+
+        Args:
+            A column with number of  variant position.
+        Return:
+            A list of filtered segments.
+        """
 
         segment_size_threshold = self.segment_size_threshold
 
