@@ -12,7 +12,10 @@ git checkout wip-2-add-pycirularize-graphics && \
 cd code &&\
 git clone https://github.com/wwoskie/cbs.git
 ```
-**NOTE:** please, pay attention to submodule initialization
+**NOTE:** please, pay attention to submodule initialization:
+
+git submodule init && \
+git submodule update
 
 ## Requirements
 
