@@ -2,9 +2,19 @@ from __future__ import annotations
 
 import os
 import pandas as pd
+import random
+import string
 import numpy as np
+import mpld3
+import jinja2
+
 from cbs.cbs import *
+from datetime import date
+from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
+from matplotlib.patches import Patch
+
+from pycirclize import Circos
 
 
 class VCF:
@@ -21,16 +31,31 @@ class VCF:
         segmentation_p: float = 0.01,
         validation_shuffles: int = 1000,
         validation_p: float = 0.01,
+        baf_freq_threshold: float = 0.95,
+        output_dir=None,
     ):
         self.input_file = input_file
         self.vcf = None
+        self.bed = None
         self.segment_size_threshold = segment_size_threshold
         self.segmentation_shuffles = segmentation_shuffles
         self.segmentation_p = segmentation_p
         self.validation_shuffles = validation_shuffles
         self.validation_p = validation_p
+        self.baf_freq_threshold = baf_freq_threshold
         self.path_to_centromeres_file = path_to_centromeres_bed
         self.centromeres = self.read_bed(path_to_centromeres_bed)
+
+        if output_dir is None:
+            current_date = date.today().strftime("%Y-%m-%d")
+            base = os.path.basename(input_file)
+            file = os.path.splitext(base)[0]
+            rand_id = ''.join(random.choice(
+                string.ascii_uppercase + string.digits) for _ in range(6))
+
+            output_dir = f"{current_date}_{file}_{rand_id}"
+
+        self.output_dir = output_dir
 
     def read(self) -> pd.DataFrame:
         """
@@ -53,7 +78,8 @@ class VCF:
                 elif current_line.startswith("#CHROM"):
                     colnames = current_line.strip().split("\t")
                 else:
-                    processed_line_dct = self._process_line(current_line, colnames)
+                    processed_line_dct = self._process_line(
+                        current_line, colnames)
                     df_lst.append(processed_line_dct)
 
         self.vcf = pd.DataFrame(df_lst)
@@ -76,7 +102,8 @@ class VCF:
 
         df_vcf = self.vcf
 
-        df_vcf = df_vcf.assign(AD=lambda x: x["AD"].str.split(","))  # split list
+        df_vcf = df_vcf.assign(
+            AD=lambda x: x["AD"].str.split(","))  # split list
         df_vcf["POS"] = pd.to_numeric(df_vcf["POS"])
         df_vcf["DP"] = pd.to_numeric(df_vcf["DP"])
         df_vcf["AD"] = df_vcf.AD.apply(
@@ -105,12 +132,11 @@ class VCF:
         for chromosome in self.vcf["#CHROM"].unique():
 
             df_vcf = self.vcf[self.vcf["#CHROM"] == chromosome]
-
-            segments = segment(df_vcf["BAF"].to_numpy())
-            segments = validate(df_vcf["BAF"].to_numpy(), segments)  # instability
-            segments = self._filter_segments_by_size(segments)
-
             baf = df_vcf["BAF"].to_numpy()
+
+            segments = segment(baf)
+            segments = validate(baf, segments)  # instability
+            segments = self._filter_segments_by_size(segments)
 
             if len(segments) > 1:
                 baf_segments = self._count_local_mean(segments, baf)
@@ -130,6 +156,8 @@ class VCF:
         chrom_bed,
         chrom_centr: str = None,
         centromeres=None,
+        save_plot = False,
+        to_html=False,
     ) -> None:
         """
         Vizuales the result of the segmentation.
@@ -172,47 +200,6 @@ class VCF:
         )
         y, x, _ = hist
 
-        if chrom_centr:
-            start_pos = min(
-                self.centromeres[self.centromeres["chr"] == chrom_centr]["start"]
-            )
-            stop_pos = max(
-                self.centromeres[self.centromeres["chr"] == chrom_centr]["stop"]
-            )
-
-            ax1.add_patch(
-                Rectangle(
-                    (start_pos, 0.5),
-                    stop_pos - start_pos,
-                    0.5,
-                    facecolor="grey",
-                    fill=True,
-                    alpha=0.3,
-                )
-            )
-
-            ax2.add_patch(
-                Rectangle(
-                    (start_pos, 0),
-                    stop_pos - start_pos,
-                    max(y),
-                    facecolor="grey",
-                    fill=True,
-                    alpha=0.3,
-                )
-            )
-
-            ax3.add_patch(
-                Rectangle(
-                    (start_pos, 0),
-                    stop_pos - start_pos,
-                    max(df_vcf["DP"]),
-                    facecolor="grey",
-                    fill=True,
-                    alpha=0.3,
-                )
-            )
-
         if chrom_bed is not None:
             for start_pos, stop_pos in zip(
                 chrom_bed["chromStart"], chrom_bed["chromEnd"]
@@ -250,12 +237,55 @@ class VCF:
                     )
                 )
 
+        if chrom_centr:
+            start_pos = min(
+                self.centromeres[self.centromeres["chr"]
+                                 == chrom_centr]["start"]
+            )
+            stop_pos = max(
+                self.centromeres[self.centromeres["chr"]
+                                 == chrom_centr]["stop"]
+            )
+
+            ax1.add_patch(
+                Rectangle(
+                    (start_pos, 0.5),
+                    stop_pos - start_pos,
+                    0.5,
+                    facecolor="grey",
+                    fill=True,
+                    alpha=0.3,
+                )
+            )
+
+            ax2.add_patch(
+                Rectangle(
+                    (start_pos, 0),
+                    stop_pos - start_pos,
+                    max(y),
+                    facecolor="grey",
+                    fill=True,
+                    alpha=0.3,
+                )
+            )
+
+            ax3.add_patch(
+                Rectangle(
+                    (start_pos, 0),
+                    stop_pos - start_pos,
+                    max(df_vcf["DP"]),
+                    facecolor="grey",
+                    fill=True,
+                    alpha=0.3,
+                )
+            )
+
         ax3.scatter(
             df_vcf["POS"],
             df_vcf["DP"],
             label=f"coverage by DP",
             alpha=0.5,
-            s=0.6,
+            s=0.8,
             marker="o",
         )
 
@@ -274,7 +304,18 @@ class VCF:
 
         fig.legend(loc="lower left")
 
-    def plot_chromosomes(self):
+
+        if save_plot:
+            self._check_and_create_output_dir()
+            fig.savefig(f'{self.output_dir}/{name}.png')   # save the figure to file
+            plt.close(fig)
+            return f'{name}.png'
+        
+        if to_html:
+            plt.close(fig) 
+            return mpld3.fig_to_html(fig)
+
+    def plot_chromosomes(self, save_plot=False, to_html=False,):
         """
         Vizualizes the whole result of the segmentation for each chromosome in the dataset.
         
@@ -285,16 +326,135 @@ class VCF:
             The plots of the chromosome data with segmentation.
 
         """
+        if self.bed is None:
+            self.bed = self.create_bed(self.vcf)
+
+        html_list = []
+        plot_paths = []
+
+
         for chromosome in self.vcf["#CHROM"].unique():
             if chromosome == "chrM":
                 continue
             df_vcf = self.vcf[self.vcf["#CHROM"] == chromosome]
-            self._plot_chromosome(
-                df_vcf,
-                name=chromosome,
-                chrom_centr=chromosome,
-                chrom_bed=self.create_bed(df_vcf),
+            
+
+            if to_html:
+                html_list.append(
+                    self._plot_chromosome(
+                    df_vcf,
+                    name=chromosome,
+                    chrom_centr=chromosome,
+                    chrom_bed=self.bed[self.bed["#chrom"] == chromosome],
+                    save_plot=save_plot,
+                    to_html=to_html,
+                    )
+                )
+
+            elif save_plot:
+                plot_paths.append(
+                    self._plot_chromosome(
+                    df_vcf,
+                    name=chromosome,
+                    chrom_centr=chromosome,
+                    chrom_bed=self.bed[self.bed["#chrom"] == chromosome],
+                    save_plot=save_plot,
+                )
             )
+
+        if to_html:
+            return html_list
+
+        if save_plot:
+            return plot_paths
+
+
+    def plot_chromosomes_circular(self, save_plot=False, to_html=False):
+        sectors = {}
+
+        for chrom in self.vcf["#CHROM"].unique():
+            sectors[chrom] = max(self.vcf[self.vcf["#CHROM"] == chrom]["POS"])
+
+        if "chrM" in sectors:
+            del sectors["chrM"]
+
+        from pycirclize import Circos
+
+        circos = Circos(
+            sectors,
+            space=1,
+            endspace=False,
+        )
+
+        for sector in circos.sectors:
+            chrom_bed = self.bed[self.bed["#chrom"] == sector.name]
+            sector.axis(lw=0)
+            sector.text(f"{sector.name.replace("chr", "")}", size=8)
+
+            track1 = sector.add_track((80, 100), r_pad_ratio=0.1)
+            track1.axis()
+
+            track1.scatter((self.vcf[self.vcf["#CHROM"] == sector.name]["POS"]).to_numpy(
+            ), (self.vcf[self.vcf["#CHROM"] == sector.name]["BAF"]).to_numpy(), s=0.1, color="violet", alpha=0.3)
+            track1.line((self.vcf[self.vcf["#CHROM"] == sector.name]["POS"]).to_numpy(
+            ), (self.vcf[self.vcf["#CHROM"] == sector.name]["BAF_segment"]).to_numpy(), color="blue")
+
+            for start_pos, stop_pos in zip(chrom_bed["chromStart"], chrom_bed["chromEnd"]):
+                sector.rect(start=start_pos, end=stop_pos, r_lim=(80, 100), color="red", alpha=0.3)
+
+            # add centromeres
+            start_pos = min(
+                self.centromeres[self.centromeres["chr"]
+                                 == sector.name]["start"]
+            )
+            stop_pos = max(
+                self.centromeres[self.centromeres["chr"]
+                                 == sector.name]["stop"]
+            )
+
+            sector.rect(start=start_pos, end=stop_pos, r_lim=(80, 100), color="grey", alpha=0.7)
+
+        fig = circos.plotfig()
+
+        legend_handles = [
+            Line2D([], [], color="violet", marker="o", label="BAF", ms=3, ls="None"),
+            Line2D([], [], color="blue", label="BAF segments"),
+            Patch(color="red", label="LOH"), 
+            Patch(color="grey", label="centromere")
+        ]
+
+        _ = circos.ax.legend(
+            handles=legend_handles,
+            bbox_to_anchor=(0.5, 0.5),
+            loc="center",
+            fontsize=8,
+        )
+
+        
+
+        if save_plot:
+            self._check_and_create_output_dir()
+            fig.savefig(f'{self.output_dir}/circular_plot.png', dpi=300)   # save the figure to file
+            plt.close(fig)
+
+        if to_html:
+            return mpld3.fig_to_html(fig)
+
+    def generate_report(self):
+        self.plot_chromosomes_circular()
+        chrom_names = self.vcf["#CHROM"].unique()
+        circle_plot_path = f'circular_plot.png'
+        plots = self.plot_chromosomes(save_plot=True)
+
+        templateLoader = jinja2.FileSystemLoader(searchpath="./")
+        templateEnv = jinja2.Environment(loader=templateLoader)
+        TEMPLATE_FILE = "index.html"
+        template = templateEnv.get_template(TEMPLATE_FILE)
+        output = template.render(circle_plot_path = circle_plot_path, 
+        plots = plots, chrom_names = chrom_names)
+
+        with open(f'{self.output_dir}/report.html', 'w') as f:
+            f.write(output)
 
     def read_bed(self, path_to_bed: str) -> pd.DataFrame:
         """
@@ -317,7 +477,7 @@ class VCF:
         return df_bed
 
     def create_bed(
-        self, df_vcf: pd.DataFrame = None, thres: float = 0.9
+        self, df_vcf: pd.DataFrame = None, thres: float = None
     ) -> pd.DataFrame:
         """
         Creates a bed pd.DataFrame from a VCF pd.DataFrame with bounds of segments filtered with a given threshold.
@@ -332,6 +492,9 @@ class VCF:
 
         if df_vcf is None:
             df_vcf = self.vcf
+
+        if thres is None:
+            thres = self.baf_freq_threshold
 
         df_vcf = df_vcf[df_vcf["BAF_segment"] >= thres]
         df_agg = (
@@ -349,11 +512,25 @@ class VCF:
         )
 
         df_bed.rename(
-            columns={"#CHROM": "#chrom", "min": "chromStart", "max": "chromEnd"},
+            columns={"#CHROM": "#chrom",
+                     "min": "chromStart", "max": "chromEnd"},
             inplace=True,
         )
+        df_bed = df_bed.sort_values(by=["#chrom"]).reset_index(drop=True)
 
-        return df_bed
+        if self.bed is None:
+            self.bed = df_bed
+
+        return self
+
+    def save_bed(self):
+        if self.bed is None:
+            self.create_bed()
+        self._check_and_create_output_dir()
+        self.bed.to_csv(f'{self.output_dir}/output.bed', index=False, sep='\t')  
+
+        return self
+
 
     def _filter_segments_by_size(self, segments: np.array) -> np.array:
         """
@@ -435,17 +612,23 @@ class VCF:
         local_means_segmented = []
 
         for indx in range(len(segments) - 1):
-            local_mean = data[segments[indx] : segments[indx + 1]].mean()
+            local_mean = data[segments[indx]: segments[indx + 1]].mean()
             local_means_segmented.extend(
                 [local_mean] * (segments[indx + 1] - segments[indx])
             )
 
         return np.array(local_means_segmented)
 
+    def _check_and_create_output_dir(self):
+        if not os.path.isdir(self.output_dir):
+                os.mkdir(self.output_dir)
+
+
     def __repr__(self):
         return (
             f"VCF(\n\tinput_file='{self.input_file}',"
             + f"\n\tpath_to_centromeres_file='{self.path_to_centromeres_file}',"
+            + f"\n\tbaf_freq_threshold={self.baf_freq_threshold},"
             + f"\n\tsegment_size_threshold={self.segment_size_threshold},"
             + f"\n\tsegmentation_shuffles={self.segmentation_shuffles},"
             + f"\n\tsegmentation_p={self.segmentation_p},"
