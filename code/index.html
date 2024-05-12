@@ -29,24 +29,24 @@
 
 
     <ul class="tiles">
-<!--
+
       {% for chromosome_name in plots %}
       
       <li class="tile">
-        <a class="tile__container-link" href="#{{ chromosome_name[0] }}">
-          <h2 class="tile__title">{{ chromosome_name[0] }}</h2>
+        <a class="tile__container-link" href="#{{ chromosome_name[1] }}">
+          <h2 class="tile__title">{{ chromosome_name[1] }}</h2>
         </a>
       </li>
 
       {% endfor %}
       
     </ul>
-  -->
-  
-    <ul class="list"></ul>
+
+
+    <ul class="list">
     {% for chromosome in plots %}
-      <li class="list__item" id="{{ chromosome }}">
-        <img class="chromosome-plot" src="{{ chromosome }}"/>
+      <li class="list__item" id="{{ chromosome[1] }}">
+        <img class="chromosome-plot" src="{{ chromosome[0] }}"/>
       </li>
     {% endfor %}
     </ul>

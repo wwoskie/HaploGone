@@ -309,11 +309,13 @@ class VCF:
             self._check_and_create_output_dir()
             fig.savefig(f'{self.output_dir}/{name}.png')   # save the figure to file
             plt.close(fig)
-            return f'{name}.png'
+            return f'{name}.png', name
         
-        if to_html:
+        elif to_html:
             plt.close(fig) 
             return mpld3.fig_to_html(fig)
+        else:
+            fig.show()
 
     def plot_chromosomes(self, save_plot=False, to_html=False,):
         """
