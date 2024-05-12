@@ -1,0 +1,62 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    
+  <title>Report</title>
+
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <link rel="stylesheet" href="../index.css">
+  </head>
+  <body class="page">
+    <header class="header">
+      
+        <nav class="topnav">
+          <div>
+            <p class="topnav__text">HaploGone Report</p>
+          </div>
+        </nav>
+      
+    </header>
+
+    <main class="content">
+        
+    
+    <img class="circle-plot" src="{{ circle_plot_path }}"/>
+
+
+    <ul class="tiles">
+<!--
+      {% for chromosome_name in plots %}
+      
+      <li class="tile">
+        <a class="tile__container-link" href="#{{ chromosome_name[0] }}">
+          <h2 class="tile__title">{{ chromosome_name[0] }}</h2>
+        </a>
+      </li>
+
+      {% endfor %}
+      
+    </ul>
+  -->
+  
+    <ul class="list"></ul>
+    {% for chromosome in plots %}
+      <li class="list__item" id="{{ chromosome }}">
+        <img class="chromosome-plot" src="{{ chromosome }}"/>
+      </li>
+    {% endfor %}
+    </ul>
+    
+          
+        
+    </main>
+    <footer class="footer">
+      <div class="footer__container">
+      </div>
+    </footer>
+  </body>
+</html>

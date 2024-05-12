@@ -1,0 +1,386 @@
+.content-title {
+    font-style: normal;
+    font-weight: 900;
+    font-size: 72px;
+    line-height: 76px;
+    text-align: center;
+    margin: 50px 0 0 0;
+    padding: 0;
+}
+
+.page {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+    min-height: 100vh;
+}
+
+.header {
+    margin: 0;
+    min-height: 80px;
+    width: 100%;
+    background-color: #333;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    
+}
+
+.header__logo {
+    max-width: 30px;
+    object-fit: cover;
+      
+}
+
+.topnav {
+    width: 80%;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin: 0px 20px 0px 20px;
+}
+
+
+
+.topnav__text{
+    margin: 0 0 0 10px;
+    text-decoration: none;
+    color: #f2f2f2;
+    padding: 5px;
+    font-weight: 900;
+}
+
+.content {
+    width: 80%;
+    max-width: 1200px;
+    margin: auto;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+
+.footer {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    margin: 70px 0 0 0;
+    background-color: #333;
+    
+  }
+
+
+.footer__container {
+    width: 80%;
+    max-width: 1200px;
+    margin: 0 auto;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+}
+
+.footer__link-container {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 18px;
+}
+
+.footer__link_logo {
+    margin: 0;
+    padding: 0;
+    justify-self: end;
+    
+    width: 215px;
+    height: 50px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+} 
+
+.footer__link {
+    text-decoration: none;
+    color: #FFFFFF;
+    padding: 0;
+    font-style: normal;
+}
+
+.footer__link:hover {
+    opacity: 0.8;
+    transition: opacity linear 0.5s;
+}
+
+@media screen and (max-width: 960px) {
+  .topnav  {
+    flex-direction: column;
+    margin-top: 30px;
+  }
+  .footer  {
+    flex-direction: column;
+  }
+
+  .footer__container  {
+    flex-direction: column;
+    margin: 50px;
+  }
+
+  .footer__link-container  {
+    flex-direction: column;
+    margin-bottom: 20px;
+  }
+
+  .footer__link_logo {
+    min-height: 30px;
+  }
+}
+
+
+.circle-plot {
+    width: 900px;
+    height: 900px;
+}
+
+.content-title {
+    font-style: normal;
+    font-weight: 900;
+    font-size: 72px;
+    line-height: 76px;
+    text-align: center;
+    margin: 50px 0 0 0;
+    padding: 0;
+}
+
+.tiles {
+  margin-top: 50px;
+    list-style-type: none;
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3%;
+}
+
+
+
+.tile {
+    position: relative;
+    margin-top: 10px;
+    
+    
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    
+    width: 50px;
+    height: 0;
+    padding-bottom: 5%;
+
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-color: #ac8dc9;
+}
+
+
+
+
+.tile__container-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: #FFFFFF;
+}
+
+.tile__container-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #2A2C2F;
+    opacity: 0.3;
+    width: 100%;
+    height: 100%;
+}
+
+.tile__container-link:hover::before {
+    opacity: 0.8;
+    transition: opacity linear 0.5s;
+}
+
+.tile__title {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+
+
+    font-style: normal;
+    font-weight: 900;
+    font-size: 36px;
+    text-align: center;
+
+    max-width: 70%;
+    max-height: 70%;
+    margin: auto;
+    padding: 0;
+    z-index: 1;
+}
+
+.content-title {
+    font-style: normal;
+    font-weight: 900;
+    font-size: 40px;
+    text-align: center;
+    margin: 50px 0 0 0;
+    padding: 0;
+}
+
+
+.chromosome-plot{
+    width: 900px;
+    height: 600px;
+
+}
+
+.list {
+    list-style-type: none;
+    margin: 50px 0 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    max-width: 70%;
+
+    /* flex: 1; */
+}
+
+.list__item {
+    margin: 10px 0 0 0;
+    padding: 0;
+}
+
+.list__item:first-of-type {
+    margin: 0;
+}
+
+.list__link {
+    color: black;
+    font-size: 24px;
+    text-decoration: none;
+    font-style: normal;
+}
+
+.list__link:hover {
+    opacity: 0.4;
+    transition: opacity linear 0.5s;
+}
+
+iframe {
+    border: 0;
+    padding:0px;
+    margin:0px;
+}
+
+.leaflet-pane {
+    border: 0;
+}
+
+.content-title {
+    font-style: normal;
+    font-weight: 900;
+    font-size: 36px;
+    text-align: center;
+    margin: 50px 0 0 0;
+    padding: 0;
+}
+
+.info-tiles {
+    margin-top: 50px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 5%;
+}
+
+.info-tile {
+    width: 100%;
+    margin-top: 50px;
+    max-width: 1000px;
+    min-width: 430px;
+    max-height: 600px;
+    min-height: 200px;
+    overflow: hidden;
+
+}
+
+.map-tile {
+    display: flex;
+    width: 100%;
+}
+
+.map-wrapper {
+    margin: 50px 30px 0 0;
+    width: 100%;
+    height: 500px;
+    overflow: hidden;
+}
+
+.map-wrapper:nth-of-type(2) {
+    margin: 50px 0 0 0;
+
+}
+
+.summary__title {
+    font-style: normal;
+    font-weight: 900;
+    font-size: 24px;
+    text-align: center;
+    margin: 50px 0 0 0;
+    padding: 0;
+}
+
+.summary__text {
+    margin: 30px 0 0 0;
+    width: 100%;
+    height: 100%;
+    font-style: normal;
+    font-size: 20px;
+    text-align: justify;
+}
+
+.graph-tile {
+    display: flex;
+    width: 100%;
+}
+
+.graph-wrapper {
+    margin: 30px 30px 0 0;
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.graph-wrapper:nth-of-type(2) {
+    margin: 30px 0 0 0;
+}
